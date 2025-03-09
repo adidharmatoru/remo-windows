@@ -1,0 +1,12 @@
+release/
+target/
+
+Dockerfile.*
+Makefile
+
+.DS_Store
+.idea/
+.vscode/
+
+.gitignore
+.git/

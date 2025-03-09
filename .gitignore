@@ -1,0 +1,8 @@
+release/
+target/
+third_party/
+
+.DS_Store
+.idea/
+.vscode/
+config.json
