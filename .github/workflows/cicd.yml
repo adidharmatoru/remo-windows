@@ -1,0 +1,178 @@
+name: CICD
+
+on: [push, pull_request]
+
+# Add permissions for the workflow
+permissions:
+  contents: write  # Required for creating releases
+
+jobs:
+  setup-ffmpeg:
+    name: Setup FFmpeg
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Check FFmpeg cache
+        id: ffmpeg-cache
+        uses: actions/cache@v4
+        with:
+          path: third_party/ffmpeg
+          key: ffmpeg-${{ runner.os }}-${{ hashFiles('Cargo.toml') }}
+      
+      - name: Download and setup FFmpeg
+        if: steps.ffmpeg-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p third_party/ffmpeg
+          curl -L https://cdn.adidharmatoru.dev/dev/uploads/files/ffmpeg-master-latest-win64-gpl-shared.zip -o ffmpeg.zip
+          unzip ffmpeg.zip -d ffmpeg_temp
+          FFMPEG_DIR=$(find ffmpeg_temp -type d -name "ffmpeg-*" | head -n 1)
+          cp -r "$FFMPEG_DIR"/* third_party/ffmpeg/
+          rm -rf ffmpeg_temp ffmpeg.zip
+          
+      - name: Validate FFmpeg setup
+        run: |
+          test -d third_party/ffmpeg/bin || exit 1
+          test -d third_party/ffmpeg/lib || exit 1
+          test -d third_party/ffmpeg/include || exit 1
+
+  build:
+    name: Build and Test
+    needs: setup-ffmpeg
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Git credentials
+        run: |
+          git config --global url."https://${{ secrets.GH_PAT }}@github.com/".insteadOf https://github.com/
+
+      - name: Restore FFmpeg cache
+        uses: actions/cache@v4
+        with:
+          path: third_party/ffmpeg
+          key: ffmpeg-${{ runner.os }}-${{ hashFiles('Cargo.toml') }}
+
+      - name: Setup Docker
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+      - name: Cache Dependencies
+        id: deps-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.toml') }}
+
+      - name: Build Docker Image
+        run: |
+          docker build \
+            --build-arg CARGO_HOME="/cargo-cache" \
+            --build-arg GITHUB_TOKEN=${{ secrets.GH_PAT }} \
+            -t remo-core-build \
+            -f .docker/Dockerfile.ci-windows .
+
+      - name: Build Release Binary
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/app \
+            -v ${{ github.workspace }}/third_party:/app/third_party \
+            -e CARGO_NET_GIT_FETCH_WITH_CLI=true \
+            -e GITHUB_TOKEN=${{ secrets.GH_PAT }} \
+            remo-core-build \
+            sh -c "git config --global url.'https://${{ secrets.GH_PAT }}@github.com/'.insteadOf 'https://github.com/' && \
+                  cargo clippy --target x86_64-pc-windows-gnu && \
+                  cargo build --release --target x86_64-pc-windows-gnu"
+
+      - name: Prepare Release Package
+        run: |
+          mkdir -p release
+          cp target/x86_64-pc-windows-gnu/release/remo-core.exe ./release/
+          cp third_party/ffmpeg/bin/*.dll ./release/
+          cd release && zip -r remo-core.zip * && cd ..
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: remo-core
+          path: release/remo-core.zip
+
+  create-release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Download Release Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: remo-core
+          path: release
+
+      - name: Generate Changelog
+        id: changelog
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const tag = context.ref.replace('refs/tags/', '');
+            const previousTag = await github.rest.repos.listTags({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              per_page: 2
+            }).then(response => {
+              const tags = response.data.map(tag => tag.name);
+              return tags.length > 1 ? tags[1] : null;
+            });
+
+            let commits;
+            if (previousTag) {
+              commits = await github.rest.repos.compareCommits({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                base: previousTag,
+                head: tag
+              }).then(response => response.data.commits);
+            } else {
+              commits = await github.rest.repos.listCommits({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                sha: tag
+              }).then(response => response.data);
+            }
+
+            const changes = commits
+              .map(commit => {
+                const message = commit.commit.message.split('\n')[0];
+                return `- ${message} (${commit.sha.substring(0, 7)})`;
+              })
+              .join('\n');
+
+            core.setOutput('result', changes);
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: release/remo-core.zip
+          name: ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          body: |
+            ## Changes
+            ${{ steps.changelog.outputs.result }}
+
+            ## Build I
+            nfo
+            - Built for Windows
+            - Includes FFmpeg support with required DLLs
+            - All files are included in the zip archive
+          draft: false
+          prerelease: false
