@@ -169,8 +169,8 @@ jobs:
             ## Changes
             ${{ steps.changelog.outputs.result }}
 
-            ## Build I
-            nfo
+            ## Build
+            Info
             - Built for Windows
             - Includes FFmpeg support with required DLLs
             - All files are included in the zip archive
