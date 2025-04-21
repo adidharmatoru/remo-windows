@@ -2,18 +2,30 @@
 
 Remo-Windows is a high-performance remote desktop and cloud gaming solution written in Rust. It provides low-latency screen sharing, audio streaming, and input control capabilities using WebRTC technology.
 
+## Demo
+
+Repository:
+The demo repository is available [here](https://github.com/adidharmatoru/remo-windows)
+
+Download:
+Download directly from [public demo - latest release](https://github.com/adidharmatoru/remo-windows/releases/download/demo/remo.zip)
+
+## Client
+
+Repository:
+The client repository is available [here](https://github.com/adidharmatoru/remo)
+
 ## Features
 
-- **Screen Capture**: Hardware-accelerated screen capture with support for cursor overlay and window highlighting
+- **Screen Capture**: Hardware-accelerated screen capture with support for cursor overlay for mobile devices
 - **Audio Streaming**: Real-time audio capture and streaming
 - **Input Control**: 
   - Keyboard and mouse input forwarding
   - Xbox 360 controller emulation
-  - Multi-controller support
+  - Multi-controller support (Multiplayer)
 - **Video Encoding**:
-  - Hardware-accelerated H.264 encoding
+  - Hardware-accelerated H.264 & AV1 encoding
   - Configurable quality settings
-  - Adaptive bitrate
 - **Audio Encoding**:
   - Opus audio codec
   - Configurable quality settings
@@ -36,8 +48,8 @@ Remo-Windows is a high-performance remote desktop and cloud gaming solution writ
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/adidharmatoru/remo-core.git
-cd remo-core
+git clone https://github.com/adidharmatoru/remo-windows.git
+cd remo-windows
 ```
 
 2. Build the project:

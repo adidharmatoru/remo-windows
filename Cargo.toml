@@ -3,5 +3,11 @@ name = "remo-win"
 version = "0.1.0"
 edition = "2021"
 
+[profile.release]
+panic = "abort"
+strip = "symbols"
+lto = true
+opt-level = "z"
+
 [dependencies]
-remo-core = { git = "https://github.com/adidharmatoru/remo-core" }
+remo-core = { git = "https://github.com/adidharmatoru/remo-core", features = ["demo"] }
