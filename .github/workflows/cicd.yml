@@ -130,57 +130,20 @@ jobs:
         with:
           workflow: cicd.yml
           branch: master
+          name: remo-win
           path: release
-
-      - name: Generate Changelog
-        id: changelog
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const tag = context.ref.replace('refs/tags/', '');
-            const previousTag = await github.rest.repos.listTags({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              per_page: 2
-            }).then(response => {
-              const tags = response.data.map(tag => tag.name);
-              return tags.length > 1 ? tags[1] : null;
-            });
-
-            let commits;
-            if (previousTag) {
-              commits = await github.rest.repos.compareCommits({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                base: previousTag,
-                head: tag
-              }).then(response => response.data.commits);
-            } else {
-              commits = await github.rest.repos.listCommits({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                sha: tag
-              }).then(response => response.data);
-            }
-
-            const changes = commits
-              .map(commit => {
-                const message = commit.commit.message.split('\n')[0];
-                return `- ${message} (${commit.sha.substring(0, 7)})`;
-              })
-              .join('\n');
-
-            core.setOutput('result', changes);
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          files: release/remo-win.zip
+          files: release/**
           name: ${{ github.ref_name }}
           tag_name: ${{ github.ref_name }}
           body: |
             ## Changes
-            ${{ steps.changelog.outputs.result }}
+            - Use smoother frame pacing logic, tested on Monster Hunter: Wilds
+            - Increase default resolution to Full HD (1920x1080)
+            - Limit demo version to 1 connected user
 
             ## Build
             Info
@@ -195,6 +158,6 @@ jobs:
             - We encourage users to try Remo in different environments and provide any suggestions or report issues via GitHub Issues.
             - The full, unrestricted version of Remo will be available soon, offering enhanced features. 
             
-            *The current release is limited to HD resolution 60FPS and is built using GitHub Actions CI. It may trigger a false positive in antivirus scans.
+            *The current release is limited to 1 connected user, Full HD resolution 60FPS, and is built using GitHub Actions CI. It may trigger a false positive in antivirus scans.
           draft: false
           prerelease: false
