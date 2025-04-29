@@ -141,9 +141,9 @@ jobs:
           tag_name: ${{ github.ref_name }}
           body: |
             ## Changes
-            - Use smoother frame pacing logic, tested on Monster Hunter: Wilds
-            - Increase default resolution to Full HD (1920x1080)
-            - Limit demo version to 1 connected user
+            - Introduce frame caching to optimize resource usage
+            - Better cleanup of encoder resources on last user disconnect
+            - Performance improvements for high-resolution displays
 
             ## Build
             Info
