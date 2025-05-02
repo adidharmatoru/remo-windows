@@ -141,9 +141,9 @@ jobs:
           tag_name: ${{ github.ref_name }}
           body: |
             ## Changes
-            - Introduce frame caching to optimize resource usage
-            - Better cleanup of encoder resources on last user disconnect
-            - Performance improvements for high-resolution displays
+            - Fix resource cleanup
+            - Fix controller deadlock
+            - Optimize frame processing
 
             ## Build
             Info
