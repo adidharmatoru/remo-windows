@@ -19,7 +19,7 @@ jobs:
     name: Setup FFmpeg
     # Only run on push to master or PR, skip for tag pushes
     if: github.event_name != 'push' || !startsWith(github.ref, 'refs/tags/')
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       
@@ -32,32 +32,36 @@ jobs:
       
       - name: Download and setup FFmpeg
         if: steps.ffmpeg-cache.outputs.cache-hit != 'true'
+        shell: pwsh
         run: |
-          mkdir -p third_party/ffmpeg
-          curl -L https://cdn.adidharmatoru.dev/dev/uploads/files/ffmpeg-master-latest-win64-gpl-shared.zip -o ffmpeg.zip
-          unzip ffmpeg.zip -d ffmpeg_temp
-          FFMPEG_DIR=$(find ffmpeg_temp -type d -name "ffmpeg-*" | head -n 1)
-          cp -r "$FFMPEG_DIR"/* third_party/ffmpeg/
-          rm -rf ffmpeg_temp ffmpeg.zip
+          New-Item -ItemType Directory -Force -Path third_party/ffmpeg
+          Invoke-WebRequest -Uri "https://cdn.adidharmatoru.dev/dev/uploads/files/ffmpeg-master-latest-win64-gpl-shared.zip" -OutFile "ffmpeg.zip"
+          Expand-Archive -Path ffmpeg.zip -DestinationPath ffmpeg_temp
+          $FFMPEG_DIR = Get-ChildItem -Path ffmpeg_temp -Directory -Filter "ffmpeg-*" | Select-Object -First 1
+          Copy-Item -Path "$($FFMPEG_DIR.FullName)/*" -Destination "third_party/ffmpeg/" -Recurse
+          Remove-Item -Path ffmpeg_temp, ffmpeg.zip -Recurse -Force
           
       - name: Validate FFmpeg setup
+        shell: pwsh
         run: |
-          test -d third_party/ffmpeg/bin || exit 1
-          test -d third_party/ffmpeg/lib || exit 1
-          test -d third_party/ffmpeg/include || exit 1
+          if (-not (Test-Path third_party/ffmpeg/bin)) { exit 1 }
+          if (-not (Test-Path third_party/ffmpeg/lib)) { exit 1 }
+          if (-not (Test-Path third_party/ffmpeg/include)) { exit 1 }
 
   build:
     name: Build and Test
     # Only run on push to master or PR, skip for tag pushes
     if: github.event_name != 'push' || !startsWith(github.ref, 'refs/tags/')
     needs: setup-ffmpeg
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       
       - name: Set up Git credentials
         run: |
-          git config --global url."https://${{ secrets.GH_PAT }}@github.com/".insteadOf https://github.com/
+          git config --global credential.helper store
+          Add-Content -Path "$HOME/.git-credentials" -Value "https://${{ secrets.GH_PAT }}@github.com`n"
+          git config --global url."https://${{ secrets.GH_PAT }}@github.com/".insteadOf "https://github.com/"
 
       - name: Restore FFmpeg cache
         uses: actions/cache@v4
@@ -65,14 +69,11 @@ jobs:
           path: third_party/ffmpeg
           key: ffmpeg-${{ runner.os }}-${{ hashFiles('Cargo.toml') }}
 
-      - name: Setup Docker
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+          toolchain: stable
+          components: rustfmt, clippy
 
       - name: Cache Dependencies
         id: deps-cache
@@ -84,32 +85,24 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.toml') }}
 
-      - name: Build Docker Image
+      - name: Build and Test
+        shell: pwsh
+        env:
+          FFMPEG_DIR: ${{ github.workspace }}/third_party/ffmpeg
+          CARGO_NET_GIT_FETCH_WITH_CLI: true
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
         run: |
-          docker build \
-            --build-arg CARGO_HOME="/cargo-cache" \
-            --build-arg GITHUB_TOKEN=${{ secrets.GH_PAT }} \
-            -t remo-win-build \
-            -f .docker/Dockerfile.ci-windows .
-
-      - name: Build Release Binary
-        run: |
-          docker run --rm \
-            -v ${{ github.workspace }}:/app \
-            -v ${{ github.workspace }}/third_party:/app/third_party \
-            -e CARGO_NET_GIT_FETCH_WITH_CLI=true \
-            -e GITHUB_TOKEN=${{ secrets.GH_PAT }} \
-            remo-win-build \
-            sh -c "git config --global url.'https://${{ secrets.GH_PAT }}@github.com/'.insteadOf 'https://github.com/' && \
-                  cargo clippy --target x86_64-pc-windows-gnu && \
-                  cargo build --release --target x86_64-pc-windows-gnu"
+          cargo fmt --all -- --check
+          cargo clippy
+          cargo build --release
 
       - name: Prepare Release Package
+        shell: pwsh
         run: |
-          mkdir -p release
-          cp target/x86_64-pc-windows-gnu/release/remo-win.exe ./release/
-          cp third_party/ffmpeg/bin/*.dll ./release/
-          cd release && zip -r remo-win.zip * && cd ..
+          New-Item -ItemType Directory -Force -Path release
+          Copy-Item -Path "target/release/remo-win.exe" -Destination "./release/"
+          Copy-Item -Path "third_party/ffmpeg/bin/*.dll" -Destination "./release/"
+          Compress-Archive -Path "release/*" -DestinationPath "release/remo-win.zip" -Force
 
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
@@ -121,7 +114,7 @@ jobs:
   create-release:
     name: Create Release
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       
@@ -141,9 +134,8 @@ jobs:
           tag_name: ${{ github.ref_name }}
           body: |
             ## Changes
-            - Fix resource cleanup
-            - Fix controller deadlock
-            - Optimize frame processing
+            - Implement system tray
+            - Optimize automatic build
 
             ## Build
             Info
