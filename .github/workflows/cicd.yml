@@ -134,22 +134,24 @@ jobs:
           tag_name: ${{ github.ref_name }}
           body: |
             ## Changes
-            - Implement system tray
-            - Optimize automatic build
+            - Add support for switching captured display by changing the main display in windows.
+            - Remove Full HD resolution 60 FPS limit.
+            - Added support for Virtual Display Driver (VDD) https://github.com/VirtualDrivers/Virtual-Display-Driver.
+            - Added bitrate and bufferframe options in config.json to alter the quality of the video.
 
             ## Build
             Info
             - Built for Windows 11
-            - All required DLLs are included in the zip archive 
-            - Almost no installation needed.
+            - Portable version, no installation needed (for core functionality).
             - Download latest vigemBus if you want to use gamepad from https://github.com/ViGEm/ViGEmBus/releases and install it.
+            - Download latest VDD if you want to use custom resolution and refresh rate from https://github.com/VirtualDrivers/Virtual-Display-Driver/releases and install it.
 
             ## Note
             - Tested 4K 120FPS on Windows 11, using software encoding and hardware encoding with a NVIDIA RTX 4060 GPU (H264 & AV1 Supported), AMD currently not tested yet.
             - This release is intended for testing and feedback purposes.
             - We encourage users to try Remo in different environments and provide any suggestions or report issues via GitHub Issues.
-            - The full, unrestricted version of Remo will be available soon, offering enhanced features. 
+            - The full, unrestricted version of Remo will be available soon, offering enhanced features (QUIC Transport & AV1 encoding). 
             
-            *The current release is limited to 1 connected user, Full HD resolution 60FPS, and is built using GitHub Actions CI. It may trigger a false positive in antivirus scans.
+            *The current release is limited to 1 connected user, webRTC (h264) only and is built using GitHub Actions CI. It may trigger a false positive in antivirus scans.
           draft: false
           prerelease: false
