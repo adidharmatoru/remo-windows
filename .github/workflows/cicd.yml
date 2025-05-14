@@ -109,7 +109,7 @@ jobs:
         with:
           name: remo-win
           path: release/remo-win.zip
-          retention-days: 90  # Keep artifacts for 90 days
+          retention-days: 1  # Keep artifacts for 1 day
 
   create-release:
     name: Create Release
@@ -134,10 +134,9 @@ jobs:
           tag_name: ${{ github.ref_name }}
           body: |
             ## Changes
-            - Add support for switching captured display by changing the main display in windows.
-            - Remove Full HD resolution 60 FPS limit.
-            - Added support for Virtual Display Driver (VDD) https://github.com/VirtualDrivers/Virtual-Display-Driver.
-            - Added bitrate and bufferframe options in config.json to alter the quality of the video.
+            - Optimize frame processing using SIMD operations.
+            - Optimize video encoding presets.
+            - Added configurable video encoding presets options.
 
             ## Build
             Info
@@ -150,7 +149,7 @@ jobs:
             - Tested 4K 120FPS on Windows 11, using software encoding and hardware encoding with a NVIDIA RTX 4060 GPU (H264 & AV1 Supported), AMD currently not tested yet.
             - This release is intended for testing and feedback purposes.
             - We encourage users to try Remo in different environments and provide any suggestions or report issues via GitHub Issues.
-            - The full, unrestricted version of Remo will be available soon, offering enhanced features (QUIC Transport & AV1 encoding). 
+            - The full, unrestricted version of Remo will be available soon, offering enhanced features (QUIC Transport, AV1 encoding, and 4:4:4:4 color space). 
             
             *The current release is limited to 1 connected user, webRTC (h264) only and is built using GitHub Actions CI. It may trigger a false positive in antivirus scans.
           draft: false
