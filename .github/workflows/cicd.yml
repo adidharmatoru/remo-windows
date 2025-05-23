@@ -134,9 +134,9 @@ jobs:
           tag_name: ${{ github.ref_name }}
           body: |
             ## Changes
-            - Optimize frame processing using SIMD operations.
-            - Optimize video encoding presets.
-            - Added configurable video encoding presets options.
+            - Optimize SIMD operations for supported CPU.
+            - 4:4:4 chroma subsampling trial.
+            - Optimize av1 encoding presets.
 
             ## Build
             Info
