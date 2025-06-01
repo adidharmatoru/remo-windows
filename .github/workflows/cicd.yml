@@ -134,9 +134,10 @@ jobs:
           tag_name: ${{ github.ref_name }}
           body: |
             ## Changes
-            - Optimize SIMD operations for supported CPU.
-            - 4:4:4 chroma subsampling trial.
-            - Optimize av1 encoding presets.
+            - Optimize SIMD operations for software encoding.
+            - Optimize capture pipeline (Audio) with zero-copy.
+            - Optimize capture pipeline (Video) with zero-copy hardware acceleration.
+            - Full codebase refactor.
 
             ## Build
             Info
