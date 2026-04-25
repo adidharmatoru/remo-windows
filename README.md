@@ -1,4 +1,13 @@
-# Remo-Windows
+# Remo Windows
+
+> [!WARNING]
+> **This repository is deprecated and no longer actively maintained.**
+>
+> Development has moved to:
+>
+> **[Alluno](https://github.com/alluno-io/alluno)**
+>
+> Please open new issues against the repositories above.
 
 Remo-Windows is a high-performance remote desktop and cloud gaming solution written in Rust. It provides low-latency screen sharing, audio streaming, and input control capabilities using WebRTC technology.
 
